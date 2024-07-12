@@ -1,9 +1,9 @@
 // ================ Libraries ================ 
 #include <DHT.h>
 #include <AM2320.h>
-#include <SoftwareSerial.h>
+// #include <SoftwareSerial.h>
 //Voltage And Current
-#include <Wire.h>
+// #include <Wire.h>
 // #include <Adafruit_INA219.h>
 // #include <Arduino.h>
 // #include <PZEM004Tv30.h>
@@ -25,37 +25,41 @@
 #define DHTTYPE DHT22           // DHT22 (AM2302)
 #define REED_SWITCH 15           // Reed Switch pin
 #define RESET (60 * 60 * 1000L)// Reset tip counter every 1hour
-#define INTERVAL (5 * 60 * 1000L)//uploading data to cloud every 1hour
+#define INTERVAL (5 * 1 * 1000L)//uploading data to cloud every 1hour
 #define JARAK_SENSOR 200//jarak sensor terhadap dasar tanah
-#define RXD2 13
-#define TXD2 12
-#define triggerPin 27 // JSN
-#define echoPin 26 // JSN
+// #define RXD2 13
+// #define TXD2 12
+#define triggerPin 34 // JSN
+#define echoPin 35 // JSN
 #define RhCorrectionAM2320 6.5
 #define TCorrectionAM2320 0.3
 #define RhCorrectionDHT22 6.2
 #define TCorrectionDHT22 0.4
 #define UltrasonicCalibratedValue 4.24
-#define triggerPinHC 33
-#define echoPinHC 32
+#define triggerPinHC 32
+#define echoPinHC 33
 #define SCL1_PIN 21 // RTC
 #define SDA1_PIN 22 // RTC
-#define SCL2_PIN 25 // AM2320
+#define SCL2_PIN 27 // AM2320
 #define SDA2_PIN 14 // AM2320
 
+// ====== LED PIN
+int red = 26;
+int green = 13;
+int yellow = 12;
 
 // ================ Initialize sensor ================
-TwoWire I2C_1 = TwoWire(0);
+// TwoWire I2C_1 = TwoWire(0);
 TwoWire I2C_2 = TwoWire(1);
 DHT dht_sensor(DHTPIN, DHTTYPE); // Initialize DHT sensor for normal 16mhz Arduino
-AM2320 am_sensor(&I2C_2);
+AM2320 am_sensor(&Wire);
 
-SoftwareSerial gprs(RXD2, TXD2); // RX, TX SIM200L
+// SoftwareSerial gprs(RXD2, TXD2); // RX, TX SIM200L
 RTC_DS3231 rtc; // Modul Realtime Clock
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+// char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 
-String dataMasuk = "";
+// String dataMasuk = "";
 
 
 // ================ set global variable ================
@@ -71,8 +75,8 @@ float tempAM2320;
 float humDHT22;
 float tempDHT22;
 float start;
-String loc = "lokasi_1";
-String getData = "";
+// String loc = "lokasi_1";
+// String getData = "";
 String mins = "";
 
 // ============Variabel HC-SR04===========
@@ -95,10 +99,14 @@ void setup(){
   pinMode(triggerPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(REED_SWITCH, INPUT_PULLUP);
-  gprs.begin(9600);
+  // gprs.begin(9600);
   pinMode(triggerPinHC, OUTPUT);
   pinMode(echoPinHC, INPUT);
-  dataMasuk.reserve(200);mins.reserve(200);
+  // dataMasuk.reserve(200);mins.reserve(200);
+
+   pinMode(red, OUTPUT);
+   pinMode(green, OUTPUT);
+   pinMode(yellow, OUTPUT);
 
   while (!Serial) {
     delay(1);
@@ -120,9 +128,28 @@ void setup(){
 #endif
 
   if (! rtc.begin()) {
+     for (int loopCount = 0; loopCount < 6; loopCount++) {
+      // Your code to be executed 3 times goes here
+      // For example, blinking an LED
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(green, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(green, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
     Serial.println("Couldn't find RTC");
+    delay(5000);
+    ESP.restart(); // resrart esp if RTC not available
     Serial.flush();
     while (1) delay(10);
+   
+  } else {
+      digitalWrite(red, LOW); // Turn LED on
+      digitalWrite(green, HIGH); // Turn LED on
+      delay(3000); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(green, LOW); // Turn LED off
   }
 
   if (rtc.lostPower()) {
@@ -148,6 +175,10 @@ void setup(){
   Serial.println("Starting minutes at : " + mins);
   start = mins.toFloat();
 
+
+  
+
+
   // ============================== END BLOCK RTC ===============================
 
 
@@ -170,6 +201,18 @@ void setup(){
 void resetCounter(){
   totalTip = 0;
   Serial.println("\nRESETING COUNTER\n");
+  for (int loopCount = 0; loopCount < 6; loopCount++) {
+      // Your code to be executed 3 times goes here
+      // For example, blinking an LED
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(yellow, HIGH); // Turn LED on
+      digitalWrite(green, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(yellow, LOW); // Turn LED off
+      digitalWrite(green, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
 }
 
 void loop(){
@@ -193,7 +236,7 @@ void codeForTask2( void * parameter ) {
         ultrasonicSensor();
         hcsr04();
         saveData();
-        request();
+        // request();
         
         last_time += INTERVAL ; // setup for next time
       }
@@ -261,6 +304,12 @@ void tipCounter(){
   { 
       prevButtonState = LOW;
       totalTip++;
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(green, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(green, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
   }
 
   if(buttonState == HIGH && prevButtonState == LOW) { //reset for next bucket tip or send a secondary virtWrite or slow serial commands
@@ -314,189 +363,37 @@ void hcsr04() {
   Serial.println(" cm");
 }
 
-
-//================================================ SIM800L ==================================================================
-
-void request(){
-
-  // checkSignal();
-
-  gprs.println("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"");
-  Serial.print("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\" = ");
-  ShowResponse(3000);
-
-  gprs.println("AT+SAPBR=3,1,\"APN\",\"internet\"");
-  Serial.print("AT+SAPBR=3,1,\"APN\",\"internet\" = ");
-  ShowResponse(3000);
-
-  gprs.println("AT+SAPBR=1,1");
-  Serial.print("AT+SAPBR=1,1 = ");
-  ShowResponse(5000);
-
-  gprs.println("AT+SAPBR=2,1");
-  Serial.print("AT+SAPBR=2,1 = ");
-  ShowResponse(5000);
-
-  gprs.println("AT+HTTPINIT");
-  Serial.print("AT+HTTPINIT = ");
-  ShowResponse(5000);
-
-  // String Server = "AT+HTTPPARA=\"URL\",\"http://riset-banjir-ulm-2023.tech/simpan.php?loc="+loc+"&tas=" + String(tinggiAirHCSR04) +"&hps=" + String(jarakSensorDanAirHCSR04);
-  String Server = "AT+HTTPPARA=\"URL\",\"http://riset-banjir-ulm-2023.tech/simpan.php?loc="+loc+"&temp=" + String(tempAM2320) + "&hum=" + String(humAM2320) + "&tempDHT22=" + String(tempDHT22) + "&humDHT22=" + String(humDHT22) + "&tas=" + String(tinggiAir) +"&hps=" + String(jarak) + "&tip=" + String(totalTip) + "&tasHCSR04=" + String(tinggiAirHCSR04) + "&hpsHCSR04=" + String(jarakSensorDanAirHCSR04);
-  // String Server5 = "AT+HTTPPARA=\"URL\",\"http://voltagecurrent.azurewebsites.net/input.php?tegangan_ina=" + String(tegangan_ina) + "&arus_ina=" + String(arus_ina) + "&tegangan_max=" + String(tegangan_max) + "&arus_max=" + String(arus_max) + "&tegangan_pzem=" + String(tegangan_pzem) + "&arus_pzem=" + String(arus_pzem);
- 
-  Serial.println(Server);
-  gprs.print(Server);
-  gprs.println("\"");
-  ShowResponse(3000);
-  
-  // set http action type 0 = GET, 1 = POST, 2 = HEAD
-  gprs.println("AT+HTTPACTION=0");
-  Serial.print("AT+HTTPACTION=0 = ");
-  GetResponse(10000);
-
-  // Serial.println(Server5);
-  // gprs.print(Server5);
-  // gprs.println("\"");
-  // ShowResponse(3000);
-  
-  // set http action type 0 = GET, 1 = POST, 2 = HEAD
-  gprs.println("AT+HTTPACTION=0");
-  Serial.print("AT+HTTPACTION=0 = ");
-  GetResponse(10000);
-
-  gprs.println("AT+HTTPREAD");
-  Serial.print("AT+HTTPREAD = ");
-  GetResponse(5000);               // respon di simpan kedalam variabel dataMasuk
-
-  Serial.print("Full data :");
-  Serial.println(dataMasuk);
-    
-  gprs.println("AT+HTTPTERM");
-  Serial.print("AT+HTTPTERM = ");
-  ShowResponse(3000);
-
-  gprs.println("AT+SAPBR=0,1");
-  Serial.print("AT+SAPBR=0,1 = ");
-  ShowResponse(5000);
-}
-
-
-void checkSignal(){
-
-  Serial.println("Menjalankan cek sinyal jaringan...");
-  // gprs.println("AT");
-  // delay(1000);
-
-  // while (gprs.available()) {
-  //   Serial.write(gprs.read());
-  // }
-
-  Serial.println("Cek status sinyal jaringan:");
-  gprs.println("AT+CSQ");
-  delay(1000);
-
-  while (gprs.available()) {
-    Serial.write(gprs.read());
-  }
-
-  // Menjalankan perintah AT+CSQ untuk mendapatkan nilai sinyal
-  // Simpan hasil dalam string
-
-  gprs.println("AT+CFUN=0");
-  Serial.print("AT+CFUN=0");
-  ShowResponse(3000);
-
-  String signalResponse = "";
-  while (gprs.available()) {
-    signalResponse += (char)gprs.read();
-  }
-
-  // Periksa apakah ada sinyal yang tersedia
-  if (signalResponse.indexOf("+CSQ:") != -1) {
-    int signalStrength = signalResponse.substring(signalResponse.indexOf(":") + 1).toInt();
-    Serial.print("Kekuatan Sinyal (dBm): ");
-    Serial.println(signalStrength);
-    
-    // Tambahkan kondisi berdasarkan kekuatan sinyal, misalnya, jika < -90 dBm, maka reset
-    if (signalStrength < -90) {
-      Serial.println("Kekuatan sinyal lemah, melakukan reset SIM800L...");
-      gprs.println("AT+CFUN=0");
-      Serial.print("AT+CFUN=0");
-      ShowResponse(3000);
-      gprs.println("AT+CFUN=1,1");
-      Serial.print("AT+CFUN=1,1");
-      ShowResponse(3000);
-      
-      while (gprs.available()) {
-        Serial.write(gprs.read());
-      }
-    }
-  } else {
-    Serial.println("Tidak dapat mendapatkan status sinyal.");
-  }
-}
-
-
-
-void ShowResponse(int wait){
-  // Serial.print("Response : ");
-  long timeNOW = millis();
-  while(millis()-timeNOW < wait){
-    if(gprs.find("OK")){
-      Serial.println("GOOD");
-      return;
-    }
-    delay(10);
-  }
-  Serial.println("error time out");
-}
-
-
-void GetResponse(int wait){
-  dataMasuk = "";
-  // Serial.print("response : ");
-  long timeNOW2 = millis();
-  while(millis()-timeNOW2 < wait){
-    while(gprs.available()>0){
-      dataMasuk += (char)gprs.read();
-    }
-    delay(1);
-  }
-  Serial.println(dataMasuk);
-  Serial.println();
-}
-
-String parse(String data, char separator, int index)
-{
-  int found = 0;
-  int strIndex[] = {0, -1};
-  int maxIndex = data.length()-1;
-
-  for(int i=0; i<=maxIndex && found<=index; i++){
-    if(data.charAt(i)==separator || i==maxIndex){
-        found++;
-        strIndex[0] = strIndex[1]+1;
-        strIndex[1] = (i == maxIndex) ? i+1 : i;
-    }
-  } 
-
-  return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
-}
-
-
 /// ================================ SD CARD LOGIC ===========================
 
 // Initialize SD card
 void initSDCard(){
    if (!SD.begin()) {
     Serial.println("Card Mount Failed");
+    for (int loopCount = 0; loopCount < 6; loopCount++) {
+      // Your code to be executed 3 times goes here
+      // For example, blinking an LED
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(yellow, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(yellow, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
     return;
   }
   uint8_t cardType = SD.cardType();
 
   if(cardType == CARD_NONE){
-    Serial.println("No SD card attached");
+    for (int loopCount = 0; loopCount < 6; loopCount++) {
+      // Your code to be executed 3 times goes here
+      // For example, blinking an LED
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(yellow, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(yellow, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
     return;
   }
   Serial.print("SD Card Type: ");
@@ -511,6 +408,10 @@ void initSDCard(){
   }
   uint64_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %lluMB\n", cardSize);
+  
+  digitalWrite(yellow, HIGH);
+  delay(3000);
+  digitalWrite(yellow, LOW);
 }
 
 // Write to the SD card
@@ -537,15 +438,41 @@ void appendFile(fs::FS &fs, const char * path, const char * message) {
   File file = fs.open(path, FILE_APPEND);
   if(!file) {
     Serial.println("Failed to open file for appending");
+    for (int loopCount = 0; loopCount < 3; loopCount++) {
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(yellow, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(yellow, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
     return;
   }
   if(file.print(message)) {
     Serial.println("Message appended");
+     for (int loopCount = 0; loopCount < 3; loopCount++) {
+      digitalWrite(green, HIGH); // Turn LED on
+      digitalWrite(yellow, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(green, LOW); // Turn LED off
+      digitalWrite(yellow, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
   } else {
     Serial.println("Append failed");
+     for (int loopCount = 0; loopCount < 3; loopCount++) {
+      digitalWrite(red, HIGH); // Turn LED on
+      digitalWrite(yellow, HIGH); // Turn LED on
+      delay(250); // Wait for 0.5 seconds
+      digitalWrite(red, LOW); // Turn LED off
+      digitalWrite(yellow, LOW); // Turn LED off
+      delay(250); // Wait for 0.5 seconds
+    }
   }
   file.close();
 }
+
+
 
 // ========================================= END SD CARD LOGIC BLOCK =========================================
 
