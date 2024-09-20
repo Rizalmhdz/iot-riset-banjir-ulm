@@ -1,3 +1,6 @@
+# BOARD ESP32
+- Lib : https://dl.espressif.com/dl/package_esp32_index.json
+
 # LED NOTIF NOTES
 
 ## 3 detik pertama indikator SDCard adaptor:
