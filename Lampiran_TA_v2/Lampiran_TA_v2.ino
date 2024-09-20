@@ -1,12 +1,7 @@
 // ================ Libraries ================ 
 #include <DHT.h>
 #include <AM2320.h>
-// #include <SoftwareSerial.h>
-//Voltage And Current
-// #include <Wire.h>
-// #include <Adafruit_INA219.h>
-// #include <Arduino.h>
-// #include <PZEM004Tv30.h>
+#include <Wire.h>
 /// tambahan RTC + SD CARD
 #include "RTClib.h"
 // Libraries for SD card
@@ -25,12 +20,10 @@
 #define DHTTYPE DHT22           // DHT22 (AM2302)
 #define REED_SWITCH 15           // Reed Switch pin
 #define RESET (60 * 60 * 1000L)// Reset tip counter every 1hour
-#define INTERVAL (5 * 1 * 1000L)//uploading data to cloud every 1hour
+#define INTERVAL (5 * 60 * 1000L)//uploading data to cloud every 1hour
 #define JARAK_SENSOR 200//jarak sensor terhadap dasar tanah
-// #define RXD2 13
-// #define TXD2 12
-#define triggerPin 34 // JSN
-#define echoPin 35 // JSN
+#define triggerPin 26 // JSN
+#define echoPin 25 // JSN
 #define RhCorrectionAM2320 6.5
 #define TCorrectionAM2320 0.3
 #define RhCorrectionDHT22 6.2
@@ -44,23 +37,17 @@
 #define SDA2_PIN 14 // AM2320
 
 // ====== LED PIN
-int red = 26;
-int green = 13;
+int red = 13;
 int yellow = 12;
+int green = 2;
 
 // ================ Initialize sensor ================
-// TwoWire I2C_1 = TwoWire(0);
+TwoWire I2C_1 = TwoWire(0);
 TwoWire I2C_2 = TwoWire(1);
 DHT dht_sensor(DHTPIN, DHTTYPE); // Initialize DHT sensor for normal 16mhz Arduino
-AM2320 am_sensor(&Wire);
+AM2320 am_sensor(&I2C_2);
 
-// SoftwareSerial gprs(RXD2, TXD2); // RX, TX SIM200L
 RTC_DS3231 rtc; // Modul Realtime Clock
-// char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-
-
-// String dataMasuk = "";
-
 
 // ================ set global variable ================
 int totalTip = 0; //variable to store total tip for 1 hour
@@ -75,8 +62,6 @@ float tempAM2320;
 float humDHT22;
 float tempDHT22;
 float start;
-// String loc = "lokasi_1";
-// String getData = "";
 String mins = "";
 
 // ============Variabel HC-SR04===========
@@ -99,10 +84,8 @@ void setup(){
   pinMode(triggerPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(REED_SWITCH, INPUT_PULLUP);
-  // gprs.begin(9600);
   pinMode(triggerPinHC, OUTPUT);
   pinMode(echoPinHC, INPUT);
-  // dataMasuk.reserve(200);mins.reserve(200);
 
    pinMode(red, OUTPUT);
    pinMode(green, OUTPUT);
@@ -129,8 +112,6 @@ void setup(){
 
   if (! rtc.begin()) {
      for (int loopCount = 0; loopCount < 6; loopCount++) {
-      // Your code to be executed 3 times goes here
-      // For example, blinking an LED
       digitalWrite(red, HIGH); // Turn LED on
       digitalWrite(green, HIGH); // Turn LED on
       delay(250); // Wait for 0.5 seconds
@@ -140,7 +121,9 @@ void setup(){
     }
     Serial.println("Couldn't find RTC");
     delay(5000);
+    Serial.println("================== RESTART SYSTEM ===================");
     ESP.restart(); // resrart esp if RTC not available
+    delay(5000);
     Serial.flush();
     while (1) delay(10);
    
@@ -162,9 +145,13 @@ void setup(){
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
 
+
+    // code untuk menganti jam RTC... uncomment ini (rt.adjucst bla bla bla) dan comment yang rtc.adjuct diatas
+    // kemudian set time berdasarkan waktu yang sesuai, kemudian upload.... 
+    // setelah waktu sesuai comment lagi code dibawah dan upload ulang
     // This line sets the RTC with an explicit date & time, for example to set
     // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+    // rtc.adjust(DateTime(2024, 7, 28, 22, 29, 0));
 
 
   
@@ -174,6 +161,55 @@ void setup(){
   }
   Serial.println("Starting minutes at : " + mins);
   start = mins.toFloat();
+
+  // Pisahkan nilai jam, menit
+   char jam[3];
+  char menit[3];
+  sprintf(jam, "%02d", now.hour());
+  sprintf(menit, "%02d", now.minute());
+
+  digitalWrite(red, HIGH);
+  delay(1000);
+  digitalWrite(red, LOW);
+  delay(500);
+
+  for (int i = 0; i < String(jam[0]).toInt(); i++) {
+    digitalWrite(green, HIGH);
+    delay(500);
+    digitalWrite(green, LOW);
+    delay(500);
+  }
+
+  for (int i = 0; i < String(jam[1]).toInt(); i++) {
+    digitalWrite(yellow, HIGH);
+    delay(500);
+    digitalWrite(yellow, LOW);
+    delay(500);
+  }
+
+  digitalWrite(red, HIGH);
+  delay(1000);
+  digitalWrite(red, LOW);
+  delay(500);
+
+  for (int i = 0; i < String(menit[0]).toInt(); i++) {
+    digitalWrite(green, HIGH);
+    delay(500);
+    digitalWrite(green, LOW);
+    delay(500);
+  }
+
+  for (int i = 0; i < String(menit[1]).toInt(); i++) {
+    digitalWrite(yellow, HIGH);
+    delay(500);
+    digitalWrite(yellow, LOW);
+    delay(500);
+  }
+
+  digitalWrite(red, HIGH);
+  delay(1000);
+  digitalWrite(red, LOW);
+  delay(500);
 
 
   
@@ -379,6 +415,11 @@ void initSDCard(){
       digitalWrite(yellow, LOW); // Turn LED off
       delay(250); // Wait for 0.5 seconds
     }
+    delay(5000);
+    Serial.println("================== RESTART SYSTEM ===================");
+    ESP.restart(); // resrart esp if RTC not available
+    delay(5000);
+    Serial.flush();
     return;
   }
   uint8_t cardType = SD.cardType();
@@ -421,6 +462,11 @@ void writeFile(fs::FS &fs, const char * path, const char * message) {
   File file = fs.open(path, FILE_WRITE);
   if(!file) {
     Serial.println("Failed to open file for writing");
+    delay(5000);
+    Serial.println("================== RESTART SYSTEM ===================");
+    ESP.restart(); // resrart esp if RTC not available
+    delay(5000);
+    Serial.flush();
     return;
   }
   if(file.print(message)) {
@@ -446,6 +492,11 @@ void appendFile(fs::FS &fs, const char * path, const char * message) {
       digitalWrite(yellow, LOW); // Turn LED off
       delay(250); // Wait for 0.5 seconds
     }
+    delay(5000);
+    Serial.println("================== RESTART SYSTEM ===================");
+    ESP.restart(); // resrart esp if RTC not available
+    delay(5000);
+    Serial.flush();
     return;
   }
   if(file.print(message)) {
@@ -468,6 +519,11 @@ void appendFile(fs::FS &fs, const char * path, const char * message) {
       digitalWrite(yellow, LOW); // Turn LED off
       delay(250); // Wait for 0.5 seconds
     }
+    delay(5000);
+    Serial.println("================== RESTART SYSTEM ===================");
+    ESP.restart(); // resrart esp if RTC not available
+    delay(5000);
+    Serial.flush();
   }
   file.close();
 }

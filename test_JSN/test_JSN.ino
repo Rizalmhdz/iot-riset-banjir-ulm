@@ -1,5 +1,5 @@
-#define triggerPin 34 // JSN
-#define echoPin 35 // JSN
+#define triggerPin 26 // JSN
+#define echoPin 25 // JSN
 #define UltrasonicCalibratedValue 4.24
 
 #define JARAK_SENSOR 200//jarak sensor terhadap dasar tanah
